@@ -9,16 +9,6 @@ import functions as F
 
 class Neuron:
     def __init__(self, nin, activation_name, init_method='uniform', init_params=None, seed=None):
-        """
-        Parameters:
-        - nin: number of inputs
-        - activation_name: 'linear', 'relu', 'sigmoid', 'tanh', 'softmax'
-        - init_method: 'zero', 'uniform', 'normal'
-        - init_params: dict with init-specific params
-            - uniform: {'low': float, 'high': float}
-            - normal: {'mean': float, 'variance': float}
-        - seed: random seed for reproducibility
-        """
         self.nin = nin
         self.activation_name = activation_name.lower()
 
@@ -88,14 +78,6 @@ class Layer:
 
 class FFNN:
     def __init__(self, layer_sizes, activations_list, init_method='uniform', init_params=None, seed=None):
-        """
-        Parameters:
-        - layer_sizes: list of int, e.g. [784, 128, 64, 10]
-        - activations_list: list of str, one per layer (excluding input), e.g. ['relu', 'relu', 'softmax']
-        - init_method: 'zero', 'uniform', 'normal'
-        - init_params: dict for init method, e.g. {'low': -0.5, 'high': 0.5}
-        - seed: random seed
-        """
         assert len(activations_list) == len(layer_sizes) - 1, \
             f"Need {len(layer_sizes)-1} activations, got {len(activations_list)}"
 
@@ -119,7 +101,6 @@ class FFNN:
         return [p for layer in self.layers for p in layer.parameters()]
 
     def _compute_reg_loss(self, reg_type, reg_lambda):
-        """Compute regularization penalty."""
         if reg_type is None or reg_lambda == 0:
             return Value(0.0)
 
@@ -138,23 +119,6 @@ class FFNN:
     def fit(self, X_train, y_train, epochs, learning_rate, batch_size=1,
             loss_fn='mse', X_val=None, y_val=None, verbose=1,
             reg_type=None, reg_lambda=0.0):
-        """
-        Train the model.
-
-        Parameters:
-        - X_train, y_train: training data
-        - epochs: number of epochs
-        - learning_rate: learning rate for gradient descent
-        - batch_size: mini-batch size
-        - loss_fn: 'mse', 'bce', 'cce'
-        - X_val, y_val: optional validation data
-        - verbose: 0 = silent, 1 = progress bar with loss
-        - reg_type: None, 'l1', 'l2'
-        - reg_lambda: regularization strength
-
-        Returns:
-        - history: {'train_loss': [...], 'val_loss': [...]}
-        """
         loss_map = {
             'mse': F.mse,
             'bce': F.binary_crossentropy,
@@ -173,7 +137,6 @@ class FFNN:
             epoch_loss = 0.0
             n_samples = len(X_train)
 
-            # Shuffle data
             indices = list(range(n_samples))
             random.shuffle(indices)
             X_shuffled = [X_train[i] for i in indices]
@@ -204,18 +167,14 @@ class FFNN:
 
                 batch_loss = batch_loss / Value(len(X_batch))
 
-                # Add regularization
                 reg_loss = self._compute_reg_loss(reg_type, reg_lambda)
                 total_loss = batch_loss + reg_loss
 
-                # Zero gradients
                 for p in self.parameters():
                     p.grad = 0.0
 
-                # Backward pass
                 total_loss.backward()
 
-                # Update weights
                 for p in self.parameters():
                     p.data -= learning_rate * p.grad
 
@@ -224,11 +183,9 @@ class FFNN:
                 if verbose == 1 and has_tqdm and isinstance(batch_iter, tqdm):
                     batch_iter.set_postfix({'loss': f'{batch_loss.data:.4f}'})
 
-            # Average training loss for this epoch
             avg_train_loss = epoch_loss / n_samples
             history['train_loss'].append(avg_train_loss)
 
-            # Compute validation loss
             if X_val is not None and y_val is not None:
                 val_loss = 0.0
                 for x, y in zip(X_val, y_val):
@@ -252,7 +209,6 @@ class FFNN:
         return history
 
     def predict(self, X):
-        """Run forward pass and return predictions as raw float lists."""
         predictions = []
         for x in X:
             x_val = [Value(xi) if not isinstance(xi, Value) else xi for xi in x]
@@ -262,7 +218,6 @@ class FFNN:
         return predictions
 
     def save(self, filepath):
-        """Save model architecture and weights to a JSON file."""
         model_data = {
             'layer_sizes': self.layer_sizes,
             'activations_list': self.activations_list,
@@ -286,7 +241,6 @@ class FFNN:
 
     @classmethod
     def load(cls, filepath):
-        """Load model from a JSON file."""
         with open(filepath, 'r') as f:
             model_data = json.load(f)
 
@@ -297,7 +251,6 @@ class FFNN:
             init_params=model_data.get('init_params', None)
         )
 
-        # Restore weights
         for layer, layer_weights in zip(model.layers, model_data['weights']):
             for neuron, neuron_data in zip(layer.neurons, layer_weights):
                 for w, w_val in zip(neuron.w, neuron_data['w']):
@@ -307,13 +260,6 @@ class FFNN:
         return model
 
     def plot_weight_distribution(self, layer_indices=None, save_path=None):
-        """
-        Plot histogram of weights for specified layers.
-
-        Parameters:
-        - layer_indices: list of int, which layers to plot (0-indexed). None = all layers.
-        - save_path: if provided, save figure to this path instead of showing.
-        """
         if layer_indices is None:
             layer_indices = list(range(len(self.layers)))
 
@@ -339,14 +285,6 @@ class FFNN:
             plt.show()
 
     def plot_gradient_distribution(self, layer_indices=None, save_path=None):
-        """
-        Plot histogram of gradients for specified layers.
-        Call after backward() to see meaningful gradients.
-
-        Parameters:
-        - layer_indices: list of int, which layers to plot (0-indexed). None = all layers.
-        - save_path: if provided, save figure to this path instead of showing.
-        """
         if layer_indices is None:
             layer_indices = list(range(len(self.layers)))
 
