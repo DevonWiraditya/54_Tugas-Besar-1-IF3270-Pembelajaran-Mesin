@@ -1,4 +1,5 @@
 import numpy as np
+#bonus 40%
 
 def unbroadcast(grad, target_shape):
     grad_shape = grad.shape
